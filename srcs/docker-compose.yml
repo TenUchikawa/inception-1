@@ -1,0 +1,76 @@
+version: '3.8'
+services:
+  mariadb_inc:
+    build:
+      context: ./mariadb
+      dockerfile: Dockerfile
+    container_name: mariadb_inc
+    env_file:
+      - .env.inc
+    volumes:
+      - db_inc_data:/var/lib/mysql
+    restart: always
+    networks:
+      - inc_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysql -u root -p$INCEPTION_DB_ROOT_PASS -e "SELECT User FROM mysql.user WHERE User=\"$INCEPTION_DB_USER\";"
+      interval: 1s
+      retries: 20
+      timeout: 30s
+
+  inc_wp:
+    depends_on:
+      mariadb_inc:
+        condition: service_healthy
+    build:
+      context: ./wordpress
+      dockerfile: Dockerfile
+    container_name: inc_wp
+    env_file:
+      - .env.inc
+    volumes:
+      - wp_inc_data:/var/www/inc
+    restart: always
+    networks:
+      - inc_net
+
+  inc_proxy:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: inc_proxy
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/inc-nginx.conf:/etc/nginx/conf.d/default.conf
+      - ssl_inc:/etc/nginx/ssl
+      - wp_inc_data:/var/www/inc
+    restart: always
+    networks:
+      - inc_net
+
+volumes:
+  db_inc_data:
+    driver: local
+    driver_opts:
+      device: /home/kryochik/data/inc_db
+      o: bind
+      type: none
+  wp_inc_data:
+    driver: local
+    driver_opts:
+      device: /home/kryochik/data/inc_wp
+      o: bind
+      type: none
+  ssl_inc:
+    driver: local
+    driver_opts:
+      device: /home/kryochik/data/inc_ssl
+      o: bind
+      type: none
+
+networks:
+  inc_net:
+    driver: bridge
