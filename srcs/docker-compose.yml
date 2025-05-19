@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: mariadb_inc
     env_file:
-      - .env.inc
+      - .env
     volumes:
       - db_inc_data:/var/lib/mysql
     restart: always
@@ -29,7 +29,7 @@ services:
       dockerfile: Dockerfile
     container_name: inc_wp
     env_file:
-      - .env.inc
+      - .env
     volumes:
       - wp_inc_data:/var/www/inc
     restart: always
